@@ -1,0 +1,26 @@
+# Eclipse
+.metadata/
+
+# React / Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment files
+frontend/.env
+frontend/.env.*
+
+# Maven
+ui-automation/target/
+
+# Eclipse project files
+ui-automation/.classpath
+ui-automation/.project
+ui-automation/.settings/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
