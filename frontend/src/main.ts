@@ -3,6 +3,7 @@ import typescriptLogo from './assets/typescript.svg'
 import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import { setupCounter } from './counter.ts'
+import { setupStudentSearch } from './studentSearch.ts'
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 <section id="center">
@@ -19,6 +20,15 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 </section>
 
 <div class="ticks"></div>
+
+<section id="student-search">
+  <h2>Student Search</h2>
+  <label for="student-search-field">Search students by name</label>
+  <input id="student-search-field" data-testid="student-search-input" type="text" autocomplete="off">
+  <div id="student-results">
+    <ul data-testid="student-list"></ul>
+  </div>
+</section>
 
 <section id="next-steps">
   <div id="docs">
@@ -58,3 +68,14 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 `
 
 setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+
+// Wired after the template above is written, because none of these elements
+// exist until then. The two `data-testid` values are the static half of the
+// contract the sibling Selenium project binds to, so they are queried by hook
+// rather than by tag, class or position. The results host is queried by id
+// because it deliberately carries no hook of its own.
+setupStudentSearch(
+  document.querySelector<HTMLInputElement>('[data-testid="student-search-input"]')!,
+  document.querySelector<HTMLUListElement>('[data-testid="student-list"]')!,
+  document.querySelector<HTMLDivElement>('#student-results')!
+)
