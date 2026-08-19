@@ -22,6 +22,13 @@ import java.net.URISyntaxException;
  * naming the key, the offending value and the expected form, so the run fails while
  * configuration is read and before a browser is launched or navigated.</p>
  *
+ * <p>Validation always runs on the trimmed value, so surrounding whitespace never decides
+ * whether a value is accepted; a value is rejected because the trimmed form is invalid. A
+ * rejection nevertheless quotes the value exactly as it was supplied, whitespace included:
+ * the trimmed form is text this class derived, while the supplied form is what the JVM was
+ * handed, and only the latter can be matched against the command line that produced it when
+ * an argument did not arrive the way its author intended.</p>
+ *
  * <p>Values are resolved on every call rather than cached, which keeps a rejection
  * attributable to the caller that asked for it instead of surfacing as a class
  * initialization error.</p>
@@ -63,11 +70,12 @@ public final class TestConfig {
      *         {@code http} or {@code https} URL carrying a host
      */
     public static String baseUrl() {
-        String value = trimmedProperty(BASE_URL_PROPERTY);
-        if (value == null) {
+        String raw = suppliedProperty(BASE_URL_PROPERTY);
+        if (raw == null) {
             return DEFAULT_BASE_URL;
         }
 
+        String value = raw.trim();
         String expectation = "expected an absolute http or https URL, for example -D"
                 + BASE_URL_PROPERTY + "=" + DEFAULT_BASE_URL;
 
@@ -76,7 +84,7 @@ public final class TestConfig {
             uri = new URI(value);
         } catch (URISyntaxException cause) {
             throw new IllegalArgumentException("Invalid system property " + BASE_URL_PROPERTY
-                    + "=\"" + value + "\": " + expectation, cause);
+                    + "=\"" + raw + "\": " + expectation, cause);
         }
 
         String scheme = uri.getScheme();
@@ -84,7 +92,7 @@ public final class TestConfig {
         boolean supportedScheme = "http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme);
         if (!uri.isAbsolute() || !supportedScheme || host == null || host.isBlank()) {
             throw new IllegalArgumentException("Invalid system property " + BASE_URL_PROPERTY
-                    + "=\"" + value + "\": " + expectation);
+                    + "=\"" + raw + "\": " + expectation);
         }
 
         return value;
@@ -102,11 +110,12 @@ public final class TestConfig {
      *         nor {@code false}
      */
     public static boolean headless() {
-        String value = trimmedProperty(HEADLESS_PROPERTY);
-        if (value == null) {
+        String raw = suppliedProperty(HEADLESS_PROPERTY);
+        if (raw == null) {
             return DEFAULT_HEADLESS;
         }
 
+        String value = raw.trim();
         if ("true".equalsIgnoreCase(value)) {
             return true;
         }
@@ -116,8 +125,8 @@ public final class TestConfig {
         }
 
         throw new IllegalArgumentException("Invalid system property " + HEADLESS_PROPERTY
-                + "=\"" + value + "\": expected exactly true or false, for example -D"
-                + HEADLESS_PROPERTY + "=false");
+                + "=\"" + raw + "\": expected the word true or false, in any letter case,"
+                + " for example -D" + HEADLESS_PROPERTY + "=false");
     }
 
     /**
@@ -128,11 +137,12 @@ public final class TestConfig {
      *         not strictly greater than zero
      */
     public static int timeoutSeconds() {
-        String value = trimmedProperty(TIMEOUT_SECONDS_PROPERTY);
-        if (value == null) {
+        String raw = suppliedProperty(TIMEOUT_SECONDS_PROPERTY);
+        if (raw == null) {
             return DEFAULT_TIMEOUT_SECONDS;
         }
 
+        String value = raw.trim();
         String expectation = "expected a positive integer number of seconds, for example -D"
                 + TIMEOUT_SECONDS_PROPERTY + "=20";
 
@@ -141,12 +151,12 @@ public final class TestConfig {
             seconds = Integer.parseInt(value);
         } catch (NumberFormatException cause) {
             throw new IllegalArgumentException("Invalid system property "
-                    + TIMEOUT_SECONDS_PROPERTY + "=\"" + value + "\": " + expectation, cause);
+                    + TIMEOUT_SECONDS_PROPERTY + "=\"" + raw + "\": " + expectation, cause);
         }
 
         if (seconds <= 0) {
             throw new IllegalArgumentException("Invalid system property "
-                    + TIMEOUT_SECONDS_PROPERTY + "=\"" + value + "\": " + expectation);
+                    + TIMEOUT_SECONDS_PROPERTY + "=\"" + raw + "\": " + expectation);
         }
 
         return seconds;
@@ -155,16 +165,20 @@ public final class TestConfig {
     /**
      * Reads one system property and reports whether it was supplied at all.
      *
+     * <p>A supplied value is returned exactly as the JVM received it. Trimming is left to the
+     * caller, which validates the trimmed form yet quotes this untouched text when it rejects
+     * a value, so the argument named in a failure is the argument that was actually typed.</p>
+     *
      * @param key the system property name, which is also the Maven {@code -D} key
-     * @return the trimmed value, or {@code null} when the property is unset, empty or
+     * @return the value as supplied, or {@code null} when the property is unset, empty or
      *         whitespace only, in which case the caller applies its default
      */
-    private static String trimmedProperty(String key) {
+    private static String suppliedProperty(String key) {
         String raw = System.getProperty(key);
         if (raw == null || raw.isBlank()) {
             return null;
         }
 
-        return raw.trim();
+        return raw;
     }
 }

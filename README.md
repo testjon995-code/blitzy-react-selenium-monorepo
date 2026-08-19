@@ -9,7 +9,9 @@ all. `ui-automation/` is a Maven project that drives Chrome with
 frontend actually renders. The feature they share is **Student Search**: a region of the frontend's
 single page that filters a small fixed roster as you type, plus three Selenium scenarios that assert
 the resulting DOM through four stable `data-testid` hooks. The two projects have no shared build and
-no generated glue — the hook strings and the student names are the whole contract between them.
+no generated glue, so every value they agree on is spelled out independently on each side: the four
+hook strings, plus the text both sides name — the student names, the empty-state wording and the
+document title. The Selector contract section below lists all of them with the file that owns each.
 
 ## Repository layout
 
@@ -114,10 +116,11 @@ The values asserted on both sides are equally part of the contract:
 | The empty-state wording `No students found` | `frontend/src/studentSearch.ts` | `ui-automation/src/test/java/com/qa/tests/StudentSearchTest.java` |
 | The document title `frontend` | `frontend/index.html` | `ui-automation/src/test/java/com/qa/tests/GoogleTest.java` |
 
-**Change rule.** Renaming a hook, editing a student name or rewording the empty state means changing
-the frontend and the Java automation **in the same commit**. Nothing but a running Selenium suite
-detects drift between the two projects — there is no shared module, no code generation and no
-compile-time link that would catch it for you.
+**Change rule.** Renaming a hook, editing a student name, rewording the empty state or changing the
+document title means changing the frontend and the Java automation **in the same commit**. Every row
+of both tables above is covered by that rule. Nothing but a running Selenium suite detects drift
+between the two projects — there is no shared module, no code generation and no compile-time link
+that would catch it for you.
 
 ## Running the frontend
 
@@ -172,9 +175,14 @@ can come from.
 
 | Property | Default | Accepted values and validation |
 |---|---|---|
-| `baseUrl` | `http://localhost:5173` | Trimmed. Must be an absolute `http` or `https` URL carrying a host. Absent or blank falls back to the default; a malformed value fails fast, before any browser navigation |
-| `headless` | `true` | Trimmed. Strictly `true` or `false`; anything else fails fast |
+| `baseUrl` | `http://localhost:5173` | Trimmed. Must be an absolute `http` or `https` URL carrying a host; the scheme is matched without regard to case. Trimming is the only rewriting applied, so the host, port, path and any trailing slash reach the browser exactly as you supplied them. Absent or blank falls back to the default; a malformed value fails fast, before any browser navigation |
+| `headless` | `true` | Trimmed. Only the words `true` and `false`, matched **without regard to case** — `TRUE` and `False` are accepted. Everything else fails fast: `1`, `yes`, `on` and misspellings are rejected rather than quietly coerced to `false` |
 | `timeoutSeconds` | `10` | Trimmed. Must be a positive integer; zero, a negative number or a non-number fails fast |
+
+Trimming decides only what gets validated, so surrounding whitespace never makes a value acceptable or
+unacceptable — a value is rejected because the trimmed form is invalid. The message still quotes the
+value exactly as you supplied it, whitespace included, because that is what the JVM received: it is the
+form you can compare against the command you actually typed when an argument did not arrive as intended.
 
 Optional diagnostic overrides:
 
@@ -213,12 +221,10 @@ argument be injected from the command line — the sandbox stays on, by design. 
 succeeds as root, or only with a sandbox bypass supplied from outside the repository, is **not** a
 supported way to verify this project.
 
-If your shell happens to be root — a container, for example — switch to an unprivileged account
-before running the suite, rather than weakening the browser:
-
-```bash
-sudo -u <unprivileged-user> -H bash -lc "cd ui-automation && mvn clean test -DbaseUrl=http://localhost:5173"
-```
+If the shell you have is root — in a container, for example — do not weaken the browser to fit the
+shell. Log in as an ordinary account first, or open a session that is already running as one, and use
+that session for both terminals. The commands themselves do not change: they are exactly the two
+blocks above, run from that account.
 
 That account needs read access to the checkout, a writable Maven repository and a writable Selenium
 Manager cache in its own home directory. Headless Chrome needs no X display.
@@ -234,7 +240,7 @@ Manager cache in its own home directory. Headless Chrome needs no X display.
 | Compilation fails with an unsupported class-file or release error | Maven is not using JDK 17 | Check `java -version` and `javac -version` both report 17, and that `JAVA_HOME` points at that same JDK 17 — Maven forks with `JAVA_HOME`, not with whatever is first on `PATH` |
 | `GoogleTest` fails with an assertion about the title | `frontend/index.html` no longer declares the title `frontend` | Either restore the title or update the expected value in `GoogleTest`, in the same change — the two are one contract |
 | Waits time out on a slow or heavily loaded machine even though the page looks right | The default 10-second budget for a DOM state is too tight for that hardware | Rerun with `-DtimeoutSeconds=20`. If it only passes with a very large budget, investigate the machine rather than raising the number further |
-| Every test errors immediately with `Invalid system property …` and no browser ever opens | `TestConfig` validated an override and rejected it — a `baseUrl` that is not an absolute `http`/`https` URL, a `headless` value that is not exactly `true` or `false`, or a `timeoutSeconds` that is not a positive integer | Fix the `-D` value; the message names the property and shows an accepted example. `BaseTest` reads all three settings before it launches Chrome, so failing here is intentional: a typo cannot silently become a misleading test failure |
+| Every test errors immediately with `Invalid system property …` and no browser ever opens | `TestConfig` validated an override and rejected it — a `baseUrl` that is not an absolute `http`/`https` URL, a `headless` value that is not the word `true` or `false` in some letter case (`1`, `yes`, `on` and misspellings are all rejected), or a `timeoutSeconds` that is not a positive integer | Fix the `-D` value; the message names the property, quotes the value exactly as the JVM received it — whitespace included, so you can compare it with the command you typed — and shows an accepted example. `BaseTest` reads all three settings before it launches Chrome, so failing here is intentional: a typo cannot silently become a misleading test failure |
 | The suite reports fewer than 4 tests but still succeeds | Tests were filtered out, for example by a leftover `-Dtest=…` | Rerun the bare command. `failIfNoTests=true` catches a completely empty run, but only reading the summary catches a partial one |
 
 ## Scope and limitations
@@ -242,8 +248,9 @@ Manager cache in its own home directory. Headless Chrome needs no X display.
 Known limitations, worth understanding before you rely on this setup:
 
 - **The cross-project contract is a convention, not a compiler.** The four hook strings, the three
-  student names and the empty-state wording are duplicated in TypeScript and in Java. Only a running
-  Selenium suite detects drift.
+  student names, the empty-state wording and the document title are defined independently in the
+  frontend sources and in the Java automation, at every place each one is needed, and have to be kept
+  in sync by hand. Only a running Selenium suite detects drift.
 - **The frontend has to be serving first.** There is no orchestrator, no health-check wait and no
   Maven-managed server; ordering the two terminals is your job.
 - **Selenium Manager may need the network.** On a cold machine it downloads a matching driver; from
@@ -270,8 +277,8 @@ Deliberately not part of this feature, so nobody goes looking for it:
 
 When you change the feature, keep these in mind — they are the conventions the current code follows:
 
-- Change a hook string, a student name or the empty-state wording in the frontend **and** in the Java
-  automation in the same commit. Nothing else will tell you they diverged.
+- Change a hook string, a student name, the empty-state wording or the document title in the frontend
+  **and** in the Java automation in the same commit. Nothing else will tell you they diverged.
 - Keep the roster in `frontend/src/students.ts`. No other frontend module hard-codes a student name.
 - Keep configuration defaults in `ui-automation/src/test/java/com/qa/config/TestConfig.java` only,
   and let callers override them with `-D` properties. Do not add a second default to the POM.
@@ -286,4 +293,3 @@ When you change the feature, keep these in mind — they are the conventions the
   or introduce another breakpoint.
 - Never hide an unmatched row with `display`, `visibility` or `opacity`; remove it, so the rendered
   row count stays truthful.
-

@@ -333,11 +333,24 @@ code {
   }
 
   /*
-   * The field's surface, hover and focus treatment mirror `.counter`, the only
-   * other interactive control on the page, so the two behave alike. `font:
-   * inherit` keeps the field on the page typeface instead of the browser's
-   * default control font, and `box-sizing: border-box` keeps a full-width field
-   * inside the section padding rather than overflowing it.
+   * The field's surface, border-color transition and focus treatment follow
+   * `.counter`, the only other interactive control on the page, so the two
+   * behave alike. `font: inherit` keeps the field on the page typeface instead
+   * of the browser's default control font, and `box-sizing: border-box` keeps a
+   * full-width field inside the section padding rather than overflowing it.
+   *
+   * The border is the field's only visual boundary, because its surface is the
+   * page surface, so it carries the whole burden of showing where the control
+   * is. That rules out the two decorative border tokens: `--border` is a
+   * hairline divider color (1.27:1 against `--bg` in light, 1.36:1 in dark) and
+   * `--accent-border` is the accent at half alpha (2.08:1 / 2.63:1), all below
+   * the 3:1 a user-interface boundary needs. `--text` resting (5.73:1 / 7.04:1)
+   * and `--accent` on hover (4.39:1 / 6.77:1) clear it in both themes while
+   * still resolving to tokens the dark block re-declares, so no literal color
+   * is introduced and dark mode keeps re-theming. Those ratios describe the
+   * current token values; re-measure if a token changes. The focus outline is
+   * left as it was, because it already cleared the threshold and stays the
+   * strongest of the three states.
    */
   input {
     width: 100%;
@@ -348,11 +361,11 @@ code {
     border-radius: 5px;
     color: var(--text);
     background: var(--bg);
-    border: 1px solid var(--border);
+    border: 1px solid var(--text);
     transition: border-color 0.3s;
 
     &:hover {
-      border-color: var(--accent-border);
+      border-color: var(--accent);
     }
     &:focus-visible {
       outline: 2px solid var(--accent);
