@@ -294,3 +294,115 @@ code {
     border-right-color: var(--border);
   }
 }
+
+/*
+ * Student Search
+ *
+ * Scoped presentation for the Student Search region that `main.ts` renders into
+ * `#student-search`. Every selector below is nested inside that id, so this
+ * block introduces no global `input`, `ul`, `li` or `p` rule and leaves the
+ * rest of the page, counter included, exactly as it was.
+ *
+ * Color and typography resolve exclusively to the custom properties declared
+ * in `:root`, because the `prefers-color-scheme: dark` block near the top of
+ * this file re-declares every one of them. A literal color here would survive
+ * unchanged into dark mode, so there are none. Spacing and radii have no
+ * tokens, so they reuse the values the neighboring sections already establish:
+ * `32px` section padding reduced to `24px 20px` on narrow viewports, `16px` and
+ * `8px` rhythm, `5px` control radius and `6px` row radius.
+ *
+ * No rule targets the heading. The global `h1, h2` and `h2` rules already give
+ * `<h2>Student Search</h2>` its family, weight, color, size, letter spacing
+ * and responsive size.
+ */
+#student-search {
+  border-top: 1px solid var(--border);
+  /*
+   * `#app` centers its content, so this region opts back out for itself. That
+   * is the same declaration, for the same reason, that `#next-steps` makes.
+   */
+  text-align: left;
+  padding: 32px;
+
+  label {
+    display: block;
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+
+  /*
+   * The field's surface, hover and focus treatment mirror `.counter`, the only
+   * other interactive control on the page, so the two behave alike. `font:
+   * inherit` keeps the field on the page typeface instead of the browser's
+   * default control font, and `box-sizing: border-box` keeps a full-width field
+   * inside the section padding rather than overflowing it.
+   */
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    font-size: 16px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: border-color 0.3s;
+
+    &:hover {
+      border-color: var(--accent-border);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  /*
+   * Results list. It stays in the document in every settled state, including
+   * when it holds no rows at all, so these rules have to read correctly while
+   * it is empty. The list reset is declared here because this list sits outside
+   * `#next-steps` and therefore inherits none of that list's reset.
+   */
+  ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 16px 0 0;
+  }
+
+  /*
+   * Result rows take the chip surface `#next-steps` puts on its links, minus
+   * the elevation-on-hover treatment that link carries: a row is plain output
+   * rather than a control, so it deliberately offers no hover, lift or pointer
+   * affordance. Nothing here can conceal a row either. A name that stops
+   * matching is removed from the document by `studentSearch.ts` rather than
+   * left in place and masked by a style rule, which is what lets automation
+   * count these rows to read the true match count.
+   */
+  li {
+    color: var(--text);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    padding: 6px 12px;
+  }
+
+  /*
+   * Empty state, rendered as a sibling of the list. The global `p { margin: 0 }`
+   * reset means its separation from the field has to be stated explicitly.
+   */
+  p {
+    color: var(--text);
+    font-size: 16px;
+    margin-top: 16px;
+  }
+
+  @media (max-width: 1024px) {
+    padding: 24px 20px;
+  }
+}
