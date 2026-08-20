@@ -2,8 +2,10 @@ package com.qa.pages;
 
 import java.util.List;
 import org.openqa.selenium.By;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.ExpectedCondition;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -96,11 +98,12 @@ public class StudentSearchPage {
      * Replaces the search term with {@code term}, exactly as a user would type it.
      *
      * <p>The field is cleared and then typed into, so the value left behind is {@code term}
-     * alone rather than a concatenation with whatever an earlier step put there. Clearing on its
-     * own is not a search: it empties the value without raising the event the feature filters
-     * on, which would leave the previous term's projection on screen, so an empty term is
-     * rejected instead. A scenario wanting the whole roster back can type a term that normalizes
-     * away - a single space will do, because the feature trims before it matches.</p>
+     * alone rather than a concatenation with whatever an earlier step put there. An empty term is
+     * rejected because it would not express a search: clearing raises the event the feature
+     * filters on only when it actually changes the value, so on a field that is already empty the
+     * call would drive no re-render at all while reading as though it had. A scenario wanting the
+     * whole roster back can type a term that normalizes away - a single space will do, because
+     * the feature trims before it matches.</p>
      *
      * @param term the term to type; must carry at least one character
      * @return this page, so a scenario can chain straight into a wait
@@ -167,15 +170,39 @@ public class StudentSearchPage {
      * <p>The comparison is exact rather than a substring test, so a truncated, extended or
      * reworded message fails instead of passing on a partial match. The awaited wording is the
      * constant declared above, which the T-3 scenario also states as its own expectation, so the
-     * two have to agree. The value returned is read back from the document rather than echoed
-     * from the expectation, so a scenario asserting on it is asserting on something actually
-     * observed in the browser.</p>
+     * two have to agree. What comes back is the text the wait itself read out of the document -
+     * neither an echo of the expectation nor a second lookup - so a scenario asserting on it is
+     * asserting on the very value that satisfied the condition. No trimming is applied here
+     * because {@code getText()} already reports rendered text with its surrounding whitespace
+     * removed.</p>
      *
-     * @return the empty state's rendered text, trimmed
+     * @return the empty state's rendered text, as the browser reported it
      */
     public String awaitEmptyStateText() {
-        wait.until(ExpectedConditions.textToBe(NO_STUDENTS_FOUND, NO_STUDENTS_FOUND_TEXT));
-        return driver.findElement(NO_STUDENTS_FOUND).getText().trim();
+        return wait.until(new ExpectedCondition<String>() {
+
+            @Override
+            public String apply(WebDriver browser) {
+                try {
+                    List<WebElement> rendered = browser.findElements(NO_STUDENTS_FOUND);
+                    if (rendered.size() != 1) {
+                        return null;
+                    }
+
+                    String text = rendered.get(0).getText();
+                    return NO_STUDENTS_FOUND_TEXT.equals(text) ? text : null;
+                } catch (StaleElementReferenceException rebuilt) {
+                    // The projection was replaced between the lookup and the read, so there is
+                    // nothing to conclude from this attempt; returning null polls again.
+                    return null;
+                }
+            }
+
+            @Override
+            public String toString() {
+                return "empty state to read exactly \"" + NO_STUDENTS_FOUND_TEXT + "\"";
+            }
+        });
     }
 
     /**

@@ -7,7 +7,9 @@ export type Student = {
   name: string
 }
 
-export const students: Student[] = [
+// Declared readonly so this single source of truth cannot be mutated by a consumer:
+// the array is handed out by reference when no term is being filtered on.
+export const students: readonly Student[] = [
   { id: 1, name: 'John Doe' },
   { id: 2, name: 'Alice Smith' },
   { id: 3, name: 'Robert Brown' }

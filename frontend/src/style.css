@@ -307,18 +307,19 @@ code {
   label {
     display: block;
     color: var(--text);
-    font-family: var(--sans);
     font-size: 16px;
     margin-bottom: 8px;
   }
 
   /*
-   * The border is the field's only visual boundary, so it has to meet the 3:1
-   * contrast a user-interface boundary needs. That rules out both decorative
-   * border tokens against `--bg`: `--border` is a hairline divider color and
-   * `--accent-border` is the accent at half alpha. `--text` at rest and
-   * `--accent` on hover clear the threshold in both themes and still resolve to
-   * tokens the dark block re-declares, so dark mode keeps re-theming.
+   * Field surface and boundary use `--bg` and `--border`; hover and focus use
+   * `--accent-border` and `--accent`, which is the treatment `.counter` already
+   * carries. All four are re-declared in the dark block, so the field re-themes
+   * with the rest of the page. Note what the resting boundary costs: `--border`
+   * is the hairline divider color, about 1.27:1 against `--bg`, so the 1px edge
+   * is below the 3:1 a user-interface boundary is usually held to. The focus
+   * outline is `--accent` and clears it, so a keyboard user still sees the
+   * field; raising the resting edge would need a higher-contrast token for it.
    */
   input {
     width: 100%;
@@ -329,16 +330,26 @@ code {
     border-radius: 5px;
     color: var(--text);
     background: var(--bg);
-    border: 1px solid var(--text);
+    border: 1px solid var(--border);
     transition: border-color 0.3s;
 
     &:hover {
-      border-color: var(--accent);
+      border-color: var(--accent-border);
     }
     &:focus-visible {
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
+  }
+
+  /*
+   * The results host owns the one 16px offset below the field, so both settled
+   * states stand the same distance from it: rows when the list has any, and the
+   * message when it has none. Spacing the two children instead puts the empty
+   * list's margin above the message's own and drops the message twice as far.
+   */
+  #student-results {
+    margin-top: 16px;
   }
 
   /*
@@ -353,7 +364,7 @@ code {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin: 16px 0 0;
+    margin: 0;
   }
 
   /*
@@ -373,10 +384,10 @@ code {
     padding: 6px 12px;
   }
 
+  /* Spacing comes from the host above; the global reset already zeroes the margin. */
   p {
     color: var(--text);
     font-size: 16px;
-    margin-top: 16px;
   }
 
   @media (max-width: 1024px) {

@@ -176,8 +176,8 @@ can come from.
 | Property | Default | Accepted values and validation |
 |---|---|---|
 | `baseUrl` | `http://localhost:5173` | Trimmed. Must be an absolute `http` or `https` URL carrying a host; the scheme is matched without regard to case. It must **not** embed user information: `http://user:password@host` is rejected, because a credential in this setting would be handed to the browser and repeated wherever the origin is reported afterwards, and the application under test needs none. Trimming is the only rewriting applied, so the host, port, path, query, fragment and any trailing slash reach the browser exactly as you supplied them. Absent or blank falls back to the default; a malformed value fails fast, before any browser navigation |
-| `headless` | `true` | Trimmed. Only the words `true` and `false`, matched **without regard to ASCII letter case** — `TRUE` and `False` are accepted. Everything else fails fast: `1`, `yes`, `on`, misspellings, and non-ASCII look-alikes such as `falſe` (with U+017F) are rejected rather than quietly coerced to `false`. The case comparison is ASCII-only for that last reason: Java's `equalsIgnoreCase` folds case across all of Unicode and reports `falſe` as equal to `false`, which would launch a visible browser from a value no reader would recognize |
-| `timeoutSeconds` | `10` | Trimmed. Must be a whole number of seconds from **1 to 300**, written in ASCII digits; zero, a negative number, a non-number, a non-ASCII digit such as `１０` (fullwidth), and anything above 300 all fail fast. The ceiling is deliberate: a wait has to be able to stop, so a DOM state that never settles fails a test in seconds instead of holding a worker for as long as `-DtimeoutSeconds=2147483647` would ask for. The ASCII-digit rule is deliberate too: `Integer.parseInt` accepts any Unicode decimal digit, so `1` followed by a fullwidth zero would otherwise become 10 |
+| `headless` | `true` | Trimmed. Only the exact words `true` and `false`, in **lower case**. Everything else fails fast rather than being quietly coerced to `false`: `TRUE`, `False`, `1`, `yes`, `on`, misspellings, and non-ASCII look-alikes such as `falſe` (with U+017F) are all rejected. Lower case only is deliberate — it is the whole of what this setting accepts, so there is no letter-case question to get wrong and no room for a look-alike that Java's Unicode-wide `equalsIgnoreCase` would have reported as equal to `false` |
+| `timeoutSeconds` | `10` | Trimmed. Must be a whole number of seconds of **1 or more**, written in ASCII digits. **Any positive value is accepted** — `-DtimeoutSeconds=600` and `-DtimeoutSeconds=86400` are valid, so how long a run may spend on a DOM state that never settles is your decision, not this project's. Three shapes fail fast: zero and negative numbers, because a wait has to be able to run; a value larger than `2147483647`, because the budget has to fit in an `int`; and anything not written in ASCII digits, such as `abc`, `7.5` or the fullwidth `１０`. That last rule is deliberate: `Integer.parseInt` accepts any Unicode decimal digit, so `1` followed by a fullwidth zero would otherwise become 10. Pick a budget your CI is willing to wait out — nothing here will stop the wait for you |
 
 **Put no secret in `baseUrl` at all — not a password, not an API key, not a bearer or session token.**
 Rejecting `user:password@` covers user information and nothing else. A token in the path, query or
@@ -186,8 +186,19 @@ is *accepted*: forwarded to Chrome unchanged, kept in your shell history, and pr
 other part of the value turns out to be invalid. Nothing in this project protects it. The application
 under test is an unauthenticated local dev server, so point the suite at an origin that needs no secret.
 
-Trimming decides only what gets validated, so surrounding whitespace never makes a value acceptable or
-unacceptable — a value is rejected because the trimmed form is invalid. The message still names the
+**Two `baseUrl` restrictions are narrower than "any absolute `http`/`https` URL", deliberately.** A URL
+embedding user information parses perfectly well and is still refused, because forwarding a credential
+to the browser is worse than failing the run; and a value whose trimmed form carries a control or other
+non-printable character is refused before a parser sees it, because that is what keeps a rejected value
+from forging a log line. Neither can turn away a well-formed origin — an RFC 3986 URI is ASCII and holds
+no control character — so in practice they cost you nothing and are worth knowing about only if you were
+expecting `http://user:pw@host` to be honoured.
+
+Trimming decides what gets validated, so whitespace around a value never makes it acceptable or
+unacceptable — a value is rejected because its trimmed form is invalid. Java's `trim()` draws that
+boundary at U+0020, so it removes an accidental leading tab or newline along with ordinary spaces:
+`-DbaseUrl=$'\thttp://localhost:5173'` is accepted, while a control character *inside* the value —
+`http://local⏎host:5173` — is rejected, which is the case that matters. The message still names the
 value as you supplied it rather than the trimmed form, because that is what the JVM received and it is
 the form you can compare against the command you actually typed when an argument did not arrive as
 intended.
@@ -196,11 +207,11 @@ It names that value as an escaped, printable rendering rather than verbatim, bec
 untrusted text on its way into your terminal or a CI log:
 
 - A control character is shown as an escape — `\r`, `\n`, `\t`, or a numeric one such as `\u001b` for
-  the rest — and any value containing one is rejected on that ground alone, before it is parsed. So a
-  value carrying a carriage return, an ANSI escape sequence or a bidirectional override cannot forge a
-  log line, drive your terminal, or reorder the message around it. A rejected `-Dheadless=yes` followed
-  by a newline and a fake `[INFO] BUILD SUCCESS`, for instance, is reported as the single line
-  ``headless="yes\r\n[INFO] BUILD SUCCESS"``.
+  the rest — and any value whose *trimmed* form contains one is rejected on that ground alone, before
+  it is parsed. So a value carrying a carriage return, an ANSI escape sequence or a bidirectional
+  override cannot forge a log line, drive your terminal, or reorder the message around it. A rejected
+  `-Dheadless=yes` followed by a newline and a fake `[INFO] BUILD SUCCESS`, for instance, is reported
+  as the single line ``headless="yes\r\n[INFO] BUILD SUCCESS"``.
 - A double quote or backslash is escaped, so the quoted value cannot be mistaken for the message text
   framing it.
 - Any character outside printable ASCII is shown as a numeric escape too, even a perfectly harmless
@@ -210,14 +221,12 @@ untrusted text on its way into your terminal or a CI log:
 - A rejected `baseUrl` is shown with anything that could be user information replaced by `***`, so a
   credential that should never have been passed is not then written to a log. The rule is blunt on
   purpose, so that a malformed value cannot slip past it: if the value contains an `@`, everything
-  before the **last** one is replaced, and the only text ever kept in front of the `***` is a leading
-  `http://` or `https://` — matched in ASCII letter case only — at the very start of the value.
-  Nothing else is trusted to mark where an authority begins, because in `http:/user:pw//x@host` the
-  later `//` sits *after* the credential, and a Unicode look-alike such as `httpſ://` is not a scheme
-  this project accepts.
-  So `http://user:pw@host/app` is reported as `http://***@host/app`, while `http:/user:pw//x@host`
-  and `ftp://host/a@b` are reported as `***@host` and `***@b` — over-hiding a scheme and a path that
-  held no secret, which is the right trade for a value being rejected anyway.
+  before the **last** one is replaced, and **nothing** is kept in front of the `***`. Anchoring on
+  the first `@` would expose the tail of a password containing one, and trusting a leading `http://`
+  to mark where the authority begins would keep text a malformed value can put in front of it.
+  So `http://user:pw@host/app` is reported as `***@host/app`, and `http:/user:pw//x@host` and
+  `ftp://host/a@b` as `***@host` and `***@b` — over-hiding a scheme and a path that held no secret,
+  which is the right trade for a value being rejected anyway.
 - Know that rule's boundary: only text *before* an `@` is hidden. The host, port, path, query and
   fragment that follow it are shown escaped but **not** redacted — and a URL whose only `@` is in its
   path is valid, so it is not rejected at all. That is why a token in a query string is not protected,
@@ -233,7 +242,7 @@ Optional diagnostic overrides:
 
 - `-Dheadless=false` — watch the browser locally instead of running headless.
 - `-DtimeoutSeconds=20` — raise the budget an explicit wait may spend on a DOM state, for slow
-  hardware. The accepted range is 1 to 300 seconds.
+  hardware. Any whole number of seconds of 1 or more is accepted.
 - `-Dtest=StudentSearchTest` — isolate the new scenarios while debugging one of them. Useful, but not
   a substitute for the full suite: **rerun `mvn clean test -DbaseUrl=http://localhost:5173` before
   calling the work done.**
@@ -284,8 +293,8 @@ Manager cache in its own home directory. Headless Chrome needs no X display.
 | The first run stalls or fails while obtaining a driver | Selenium Manager needs outbound network access on a cold machine to fetch a ChromeDriver matching the installed Chrome | Give the run network access once. Afterwards it works from the local Selenium Manager cache, so keep that cache writable by the account running the suite, and expect a fresh fetch after Chrome updates |
 | Compilation fails with an unsupported class-file or release error | Maven is not using JDK 17 | Check `java -version` and `javac -version` both report 17, and that `JAVA_HOME` points at that same JDK 17 — Maven forks with `JAVA_HOME`, not with whatever is first on `PATH` |
 | `GoogleTest` fails with an assertion about the title | `frontend/index.html` no longer declares the title `frontend` | Either restore the title or update the expected value in `GoogleTest`, in the same change — the two are one contract |
-| Waits time out on a slow or heavily loaded machine even though the page looks right | The default 10-second budget for a DOM state is too tight for that hardware | Rerun with `-DtimeoutSeconds=20`. If it only passes with a very large budget, investigate the machine rather than raising the number further — 300 seconds is the accepted ceiling, and needing anything close to it means the budget is not the problem |
-| Every test errors immediately with `Invalid system property …` and no browser ever opens | `TestConfig` validated an override and rejected it — a `baseUrl` that is not an absolute `http`/`https` URL or that embeds a `user:password@` credential, a `headless` value that is not the word `true` or `false` in some letter case (`1`, `yes`, `on` and misspellings are all rejected), a `timeoutSeconds` outside 1 to 300, or any of the three carrying a control character | Fix the `-D` value; the message names the property, shows the value you supplied in the escaped printable form described under [Configuration](#configuration) — spaces visible, control characters escaped, anything that could be user information replaced by `***` — and gives an accepted example. `BaseTest` reads all three settings before it launches Chrome, so failing here is intentional: a typo cannot silently become a misleading test failure |
+| Waits time out on a slow or heavily loaded machine even though the page looks right | The default 10-second budget for a DOM state is too tight for that hardware | Rerun with `-DtimeoutSeconds=20`. There is no ceiling, so a larger number is always accepted — but if it only passes with a very large budget, investigate the machine rather than raising the number further, because a page this feature renders synchronously should never need minutes |
+| Every test errors immediately with `Invalid system property …` and no browser ever opens | `TestConfig` validated an override and rejected it — a `baseUrl` that is not an absolute `http`/`https` URL or that embeds a `user:password@` credential, a `headless` value that is not exactly `true` or `false` in lower case (`TRUE`, `1`, `yes`, `on` and misspellings are all rejected), a `timeoutSeconds` below 1 or too large for an `int`, or any of the three carrying a control character inside its trimmed form | Fix the `-D` value; the message names the property, shows the value you supplied in the escaped printable form described under [Configuration](#configuration) — spaces visible, control characters escaped, anything that could be user information replaced by `***` — and gives an accepted example. `BaseTest` reads all three settings before it launches Chrome, so failing here is intentional: a typo cannot silently become a misleading test failure |
 | A rejected `baseUrl` appears in the build log with a secret still readable in it | Only user information (the part before an `@`) is redacted. A password, API key or token in the path, query or fragment is not — and a valid URL carrying one is not even rejected, it is navigated to | Treat that log and any shell history as exposed, and rotate the secret. Then point the suite at an origin that needs no credential: this project's application under test is an unauthenticated local dev server, and no `-D` value here should ever carry a secret |
 | The suite reports fewer than 4 tests but still succeeds | Tests were filtered out, for example by a leftover `-Dtest=…` | Rerun the bare command. `failIfNoTests=true` catches a completely empty run, but only reading the summary catches a partial one |
 

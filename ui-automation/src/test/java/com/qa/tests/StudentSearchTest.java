@@ -7,6 +7,17 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * The three Student Search acceptance scenarios, one test method each.
+ *
+ * <p>T-1 loads the region and expects the whole roster in declaration order; T-2 searches for
+ * {@code Alice} and expects that one match alone; T-3 searches for a term no student matches and
+ * expects no rows plus the exact empty-state wording.</p>
+ *
+ * <p>Every scenario states its expectations as values - names, counts and wording - and reaches
+ * the page through {@link StudentSearchPage}, so no locator, hook string or wait condition appears
+ * here. The browser session comes from {@link BaseTest}, one per test method.</p>
+ */
 public class StudentSearchTest extends BaseTest {
 
     @Test

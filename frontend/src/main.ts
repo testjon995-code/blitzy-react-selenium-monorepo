@@ -25,7 +25,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <h2>Student Search</h2>
   <label for="student-search-field">Search students by name</label>
   <input id="student-search-field" data-testid="student-search-input" type="text" autocomplete="off">
-  <div id="student-results" aria-live="polite" aria-atomic="false" aria-relevant="additions text">
+  <div id="student-results" aria-live="polite">
     <ul data-testid="student-list"></ul>
   </div>
 </section>

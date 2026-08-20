@@ -27,16 +27,16 @@ export function setupStudentSearch(
   list: HTMLUListElement,
   resultsHost: HTMLElement
 ) {
-  const findMatches = (term: string): Student[] => {
+  const findMatches = (term: string): readonly Student[] => {
     const normalized = term.trim().toLowerCase()
     if (normalized === '') {
+      // The roster itself, by reference rather than as a copy. Safe because it is
+      // declared readonly at its source and nothing here writes to a match set.
       return students
     }
     return students.filter((student) => student.name.toLowerCase().includes(normalized))
   }
 
-  // Zero matches unambiguously means the no-match state: the roster is never empty
-  // and a term that normalizes to nothing returns all of it.
   const render = (term: string) => {
     const matches = findMatches(term)
 
@@ -50,6 +50,8 @@ export function setupStudentSearch(
       staleEmptyState.remove()
     }
 
+    // Zero matches unambiguously means the no-match state: the roster is never empty
+    // and a term that normalizes to nothing returns all of it.
     if (matches.length === 0) {
       const emptyState = document.createElement('p')
       emptyState.setAttribute('data-testid', 'no-students-found')
