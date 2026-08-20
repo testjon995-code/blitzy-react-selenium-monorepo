@@ -69,20 +69,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 
 setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
 
-// Wired after the template above is written, because none of these elements
-// exist until then. The two `data-testid` values are the static half of the
-// contract the sibling Selenium project binds to, so they are queried by hook
-// rather than by tag, class or position. The results host is queried by id
-// because it deliberately carries no hook of its own.
-//
-// That host doubles as the region's status channel. `aria-live="polite"` gets
-// each rebuilt result set announced without interrupting the user's typing, and
-// it sits on the host rather than on the list so the empty-state paragraph
-// appended beside the list is covered by the same region. `aria-atomic="false"`
-// with `aria-relevant="additions text"` keeps each announcement to the rows or
-// message just added instead of a re-read of everything on every keystroke. The
-// initial roster is rendered below in the same task that writes this markup, so
-// it is the region's starting content rather than a change to announce.
+// Wired after the template above is written, because none of these elements exist
+// until then. The live region sits on the results host rather than on the list so it
+// covers both the rebuilt rows and the empty-state message appended beside them.
 setupStudentSearch(
   document.querySelector<HTMLInputElement>('[data-testid="student-search-input"]')!,
   document.querySelector<HTMLUListElement>('[data-testid="student-list"]')!,

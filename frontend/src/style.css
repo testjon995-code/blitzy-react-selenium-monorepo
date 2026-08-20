@@ -295,26 +295,6 @@ code {
   }
 }
 
-/*
- * Student Search
- *
- * Scoped presentation for the Student Search region that `main.ts` renders into
- * `#student-search`. Every selector below is nested inside that id, so this
- * block introduces no global `input`, `ul`, `li` or `p` rule and leaves the
- * rest of the page, counter included, exactly as it was.
- *
- * Color and typography resolve exclusively to the custom properties declared
- * in `:root`, because the `prefers-color-scheme: dark` block near the top of
- * this file re-declares every one of them. A literal color here would survive
- * unchanged into dark mode, so there are none. Spacing and radii have no
- * tokens, so they reuse the values the neighboring sections already establish:
- * `32px` section padding reduced to `24px 20px` on narrow viewports, `16px` and
- * `8px` rhythm, `5px` control radius and `6px` row radius.
- *
- * No rule targets the heading. The global `h1, h2` and `h2` rules already give
- * `<h2>Student Search</h2>` its family, weight, color, size, letter spacing
- * and responsive size.
- */
 #student-search {
   border-top: 1px solid var(--border);
   /*
@@ -333,24 +313,12 @@ code {
   }
 
   /*
-   * The field's surface, border-color transition and focus treatment follow
-   * `.counter`, the only other interactive control on the page, so the two
-   * behave alike. `font: inherit` keeps the field on the page typeface instead
-   * of the browser's default control font, and `box-sizing: border-box` keeps a
-   * full-width field inside the section padding rather than overflowing it.
-   *
-   * The border is the field's only visual boundary, because its surface is the
-   * page surface, so it carries the whole burden of showing where the control
-   * is. That rules out the two decorative border tokens: `--border` is a
-   * hairline divider color (1.27:1 against `--bg` in light, 1.36:1 in dark) and
-   * `--accent-border` is the accent at half alpha (2.08:1 / 2.63:1), all below
-   * the 3:1 a user-interface boundary needs. `--text` resting (5.73:1 / 7.04:1)
-   * and `--accent` on hover (4.39:1 / 6.77:1) clear it in both themes while
-   * still resolving to tokens the dark block re-declares, so no literal color
-   * is introduced and dark mode keeps re-theming. Those ratios describe the
-   * current token values; re-measure if a token changes. The focus outline is
-   * left as it was, because it already cleared the threshold and stays the
-   * strongest of the three states.
+   * The border is the field's only visual boundary, so it has to meet the 3:1
+   * contrast a user-interface boundary needs. That rules out both decorative
+   * border tokens against `--bg`: `--border` is a hairline divider color and
+   * `--accent-border` is the accent at half alpha. `--text` at rest and
+   * `--accent` on hover clear the threshold in both themes and still resolve to
+   * tokens the dark block re-declares, so dark mode keeps re-theming.
    */
   input {
     width: 100%;
@@ -405,10 +373,6 @@ code {
     padding: 6px 12px;
   }
 
-  /*
-   * Empty state, rendered as a sibling of the list. The global `p { margin: 0 }`
-   * reset means its separation from the field has to be stated explicitly.
-   */
   p {
     color: var(--text);
     font-size: 16px;
