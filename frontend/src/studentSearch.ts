@@ -30,8 +30,9 @@ export function setupStudentSearch(
   const findMatches = (term: string): readonly Student[] => {
     const normalized = term.trim().toLowerCase()
     if (normalized === '') {
-      // The roster itself, by reference rather than as a copy. Safe because it is
-      // declared readonly at its source and nothing here writes to a match set.
+      // The roster itself, by reference rather than as a copy. Safe because the array
+      // and its entries are declared readonly at their source, so no caller of this
+      // module can reach through the returned value and change the data.
       return students
     }
     return students.filter((student) => student.name.toLowerCase().includes(normalized))

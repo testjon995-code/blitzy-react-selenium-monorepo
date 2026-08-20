@@ -3,12 +3,13 @@
 // couples the two projects at build time, so change both sides in the same commit.
 
 export type Student = {
-  id: number
-  name: string
+  readonly id: number
+  readonly name: string
 }
 
-// Declared readonly so this single source of truth cannot be mutated by a consumer:
-// the array is handed out by reference when no term is being filtered on.
+// Readonly all the way down - the array cannot be reordered or resized, and neither
+// field of an entry can be reassigned - because this single source of truth is handed
+// out by reference whenever no term is being filtered on.
 export const students: readonly Student[] = [
   { id: 1, name: 'John Doe' },
   { id: 2, name: 'Alice Smith' },

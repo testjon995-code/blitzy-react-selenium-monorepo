@@ -115,10 +115,12 @@ public class StudentSearchPage {
         }
         if (term.isEmpty()) {
             throw new IllegalArgumentException(
-                    "search term must carry at least one character, because clearing the field "
-                            + "alone does not notify the application and would leave the previous "
-                            + "result set on screen; type a term that normalizes away, such as a "
-                            + "single space, to restore the full roster");
+                    "search term must carry at least one character, because an empty term does "
+                            + "not express a search: on a field that already holds nothing, "
+                            + "clearing it changes no value and so raises no event, leaving "
+                            + "nothing for the application to re-render; type a term that "
+                            + "normalizes away, such as a single space, to restore the full "
+                            + "roster");
         }
 
         // Clickability is resolved on each call, which is what guarantees the field is ready to
